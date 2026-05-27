@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>名家雄辯：白馬過關</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      /* 帶有古風水墨質感的背景色 */
+      background-color: #e5e0d8;
+      background-image: url('https://www.transparenttextures.com/patterns/rice-paper.png');
+      font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", serif;
+    }
+    
+    .guard-shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease-in forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 對話框尖角 */
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-width: 10px 10px 10px 0;
+      border-style: solid;
+      border-color: transparent #f9fafb transparent transparent;
+      display: block;
+      width: 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-gray-900 flex flex-col items-center py-8 px-4 sm:px-8">
+
+  <!-- 遊戲主畫面 -->
+  <div id="game-container" class="max-w-4xl w-full flex flex-col h-full fade-in">
+    
+    <!-- 標題與進度 -->
+    <div class="flex justify-between items-end border-b-2 border-slate-700 pb-4 mb-6">
+      <div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold flex items-center gap-3 text-slate-800">
+          <i data-lucide="scroll" class="w-8 h-8 sm:w-10 sm:h-10 text-slate-600"></i>
+          名家雄辯：白馬非馬
+        </h1>
+        <p class="text-sm sm:text-base text-slate-600 mt-2 font-medium">趙國邊關，禁馬出城。你必須以邏輯辯倒守將。</p>
+      </div>
+      <div class="text-right">
+        <span id="stage-counter" class="text-sm font-bold text-slate-100 bg-slate-700 px-4 py-1.5 rounded-full shadow">
+          第 1 辯 / 共 3 辯
+        </span>
+      </div>
+    </div>
+
+    <!-- 辯論區塊 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+      
+      <!-- 守將 (左側) -->
+      <div class="lg:col-span-5 flex flex-col items-center sm:items-start justify-center bg-slate-200/50 p-6 rounded-xl border border-slate-300">
+        <div class="flex items-center gap-4 w-full mb-4">
+          <div class="w-24 h-24 bg-slate-300 rounded-full border-4 border-slate-600 flex items-center justify-center overflow-hidden shadow-inner flex-shrink-0">
+             <!-- 使用 DiceBear 生成古人風格頭像 -->
+             <img id="guard-image" src="https://api.dicebear.com/7.x/bottts/svg?seed=Guard1&backgroundColor=cbd5e1" alt="守將" class="w-20 h-20" />
+          </div>
+          <div>
+            <h2 id="guard-name" class="text-xl font-bold text-slate-800 border-b-2 border-slate-400 pb-1 inline-block mb-1">
+              趙國守將
+            </h2>
+            <p class="text-xs text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded border border-red-200">阻擋條件：禁止馬匹通過</p>
+          </div>
+        </div>
+        
+        <!-- 守將對話框 -->
+        <div class="relative bg-gray-50 p-5 rounded-xl border border-gray-300 shadow-md w-full ml-0 sm:ml-4 speech-bubble">
+          <p id="guard-dialogue" class="text-lg font-medium leading-relaxed text-gray-800">
+            「站住！上頭有令，近日嚴查，所有『馬』一律不准出關！你牽的這隻明明是馬，還不快快退下！」
+          </p>
+        </div>
+      </div>
+
+      <!-- 玩家回應 (右側) -->
+      <div class="lg:col-span-7 flex flex-col justify-center">
+        <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-slate-700">
+          <i data-lucide="message-square" class="w-5 h-5 text-slate-600"></i>
+          請選擇你的邏輯反擊：
+        </h3>
+        
+        <div id="options-container" class="flex flex-col gap-3">
+          <!-- 選項按鈕由 JS 動態生成 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果回饋區 (預設隱藏) -->
+    <div id="feedback-area" class="hidden flex-col items-center mt-4 fade-in">
+      <div id="feedback-card" class="w-full rounded-xl p-6 shadow-lg border-2 mb-6">
+        <div class="flex items-start gap-4">
+          <div id="feedback-icon-container" class="mt-1">
+            <i id="feedback-icon" data-lucide="check-circle" class="w-8 h-8"></i>
+          </div>
+          <div>
+            <h4 id="feedback-title" class="font-bold text-xl mb-2">標題</h4>
+            <p id="feedback-message" class="mb-4 leading-relaxed font-medium">訊息</p>
+            <div id="feedback-logic" class="p-4 rounded-lg text-sm font-medium border bg-opacity-50">
+              <i data-lucide="brain-circuit" class="w-4 h-4 inline-block mr-1 mb-0.5 align-middle"></i>
+              <span id="feedback-logic-text">邏輯解析</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <button id="next-btn" onclick="nextStage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-lg font-bold text-lg shadow-md transition-all flex items-center justify-center gap-2">
+        <span id="next-btn-text">下一輪辯論</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- 結算畫面 (預設隱藏) -->
+  <div id="end-container" class="max-w-3xl w-full bg-slate-50 rounded-2xl shadow-2xl p-10 border-2 border-slate-400 hidden my-auto flex-col items-center fade-in">
+    <i data-lucide="award" class="w-24 h-24 text-amber-600 mb-6"></i>
+    <h1 class="text-4xl font-extrabold mb-6 text-slate-800">辯才無礙：名家大師</h1>
+    
+    <div class="text-left w-full space-y-4 text-slate-700 text-lg leading-relaxed bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-inner">
+      <p>
+        守將被你繞得暈頭轉向，只好揮揮手放你與你的白馬出關。你成功演繹了中國哲學史上最著名的邏輯命題——<strong>「白馬非馬」</strong>。
+      </p>
+      <div class="border-l-4 border-amber-500 pl-4 bg-amber-50 p-3">
+        <p class="font-bold mb-1">【哲學與邏輯解析】</p>
+        <p class="text-sm">
+          公孫龍的詭辯（或說嚴密的邏輯拆解），在於他區分了概念的<strong>「內涵 (Intension)」</strong>與<strong>「外延 (Extension)」</strong>。<br><br>
+          日常生活中我們說「白馬是馬」，意思是「白馬『屬於』馬的集合」。<br>
+          但公孫龍故意將「是」解釋為「完全等同 (Identity)」。因為「白馬」的內涵（形狀+顏色）大於「馬」的內涵（僅有形狀），所以「白馬」的概念不等於「馬」的概念。<br>
+          這在邏輯學上揭示了「共相（一般性）」與「殊相（特殊性）」的差異，是古代語言分析學的一大里程碑！
+        </p>
+      </div>
+    </div>
+
+    <button onclick="restartGame()" class="flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-lg font-bold text-lg transition-colors shadow-lg">
+      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+      <span>牽匹黑馬，再來一次</span>
+    </button>
+  </div>
+
+  <script>
+    // 遊戲劇本資料
+    const STAGES = [
+      {
+        id: 1,
+        guardName: "邊關新兵",
+        guardAvatar: "Guard1",
+        guardDialogue: "「站住！上頭有令，所有『馬』一律不准出關！你牽的這隻明明有著馬的形體，當然是馬，不准過去！」",
+        options: [
+          {
+            text: "「這其實是一頭長得像馬的白鹿，只是被我修剪過毛髮罷了。」",
+            isCorrect: false,
+            feedback: "這是指鹿為馬，而非邏輯思辨。守將一眼識破了你的謊言，準備拔刀相向。"
+          },
+          {
+            text: "「『馬』這個字規定的是形體，『白』這個字規定的是顏色。命令說『馬』不能過，但沒有說『形體加上白色的白馬』不能過啊！」",
+            isCorrect: true,
+            feedback: "漂亮！你成功將「概念的內涵」剝離開來。"
+          },
+          {
+            text: "「我是齊國的使者，擁有外交豁免權，這匹馬是國家的財產，你無權阻攔。」",
+            isCorrect: false,
+            feedback: "這是在用權力壓人，完全偏離了名家的邏輯辯論精神。守將不吃這套。"
+          }
+        ],
+        logicExplanation: "公孫龍第一論：區分屬性。『馬』命形，『白』命色。命色者非命形也。因此『白馬』這個概念，與單純的『馬』概念在內涵上是不同的。"
+      },
+      {
+        id: 2,
+        guardName: "守城老兵",
+        guardAvatar: "Guard2",
+        guardDialogue: "「哼，少跟我玩文字遊戲！白馬難道不是馬的一種嗎？如果長官要我牽一匹馬來，我牽這匹白馬過去，長官難道會說這不是馬嗎？」",
+        options: [
+          {
+            text: "「既然長官要的是馬，那不管是白馬、黑馬都一樣，所以白馬就是馬，但請你通融一下讓我過去。」",
+            isCorrect: false,
+            feedback: "你屈服於常識邏輯了！這樣承認白馬是馬，你就無法過關了。"
+          },
+          {
+            text: "「因為這匹白馬的價格比普通的馬貴上十倍，貴重物品不能用普通的規則來衡量。」",
+            isCorrect: false,
+            feedback: "偷換概念。價值高低並不能改變物種的邏輯分類，老兵冷笑一聲將你攔下。"
+          },
+          {
+            text: "「若長官要『馬』，牽黃馬、黑馬都可以；但若長官要『白馬』，牽黃馬、黑馬就不行了。這證明『求馬』跟『求白馬』結果不同，兩者怎會是一樣的東西？」",
+            isCorrect: true,
+            feedback: "精采！你從「概念的外延」（集合範圍）證明了兩者不等價。"
+          }
+        ],
+        logicExplanation: "公孫龍第二論：範圍檢驗。黃馬黑馬皆可應『有馬』之求，卻不可應『有白馬』之求。既然能應驗的對象不同，說明兩者不是同一個概念。"
+      },
+      {
+        id: 3,
+        guardName: "關隘都尉",
+        guardAvatar: "Guard3",
+        guardDialogue: "「巧言令色！就算『白馬』和『馬』的概念不完全相同，但白馬身上終究具有『馬』的本質！只要有馬的本質，就是馬！」",
+        options: [
+          {
+            text: "「『馬』這個概念本身是沒有設定顏色的。如果『白馬』就等同於『馬』，那天下難道所有的馬都必須是白色的嗎？既然天下有各種顏色的馬，可見『白馬』不等同於『馬』。」",
+            isCorrect: true,
+            feedback: "絕殺！你指出了『共相（普遍性）』與『殊相（特殊性）』的根本差異。"
+          },
+          {
+            text: "「你看到的白色只是一種視覺幻象，如果蒙上眼睛，它就沒有顏色，所以它只是一團虛無的氣。」",
+            isCorrect: false,
+            feedback: "你陷入了道家的虛無主義或佛學的色空論，但這不是名家講求實證與定義的邏輯！"
+          },
+          {
+            text: "「馬的本質是被人騎乘，現在我沒有騎牠，所以牠現在不是馬，只是一隻動物。」",
+            isCorrect: false,
+            feedback: "這改變了『馬』的定義（從形體變成功能），屬於定義不清的謬誤，都尉立刻識破了。"
+          }
+        ],
+        logicExplanation: "公孫龍第三論：共相與殊相。『馬』是普遍的共相，不包含具體顏色。將特定屬性（白）強加於普遍概念（馬）上，在嚴格的同一性邏輯（Identity）上是不成立的。"
+      }
+    ];
+
+    let currentStageIndex = 0;
+    let isStageComplete = false;
+
+    // DOM 元素
+    const gameContainer = document.getElementById('game-container');
+    const endContainer = document.getElementById('end-container');
+    const optionsContainer = document.getElementById('options-container');
+    const feedbackArea = document.getElementById('feedback-area');
+    
+    // 初始化/渲染 UI
+    function renderStage() {
+      const stage = STAGES[currentStageIndex];
+      isStageComplete = false;
+      feedbackArea.classList.add('hidden');
+
+      // 移除守將動畫（如果有的話），以便下次可以重新觸發
+      document.getElementById('guard-image').parentElement.classList.remove('guard-shake');
+
+      // 更新進度與守將資訊
+      document.getElementById('stage-counter').textContent = `第 ${currentStageIndex + 1} 辯 / 共 ${STAGES.length} 辯`;
+      document.getElementById('guard-name').textContent = stage.guardName;
+      document.getElementById('guard-image').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${stage.guardAvatar}&backgroundColor=cbd5e1`;
+      document.getElementById('guard-dialogue').textContent = stage.guardDialogue;
+
+      // 渲染選項
+      optionsContainer.innerHTML = '';
+      stage.options.forEach((option, index) => {
+        const btn = document.createElement('button');
+        btn.className = "text-left p-4 rounded-xl border-2 border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50 transition-all shadow-sm text-slate-700 font-medium text-base sm:text-lg option-btn";
+        btn.innerHTML = option.text;
+        btn.onclick = () => selectOption(index, option.isCorrect);
+        optionsContainer.appendChild(btn);
+      });
+
+      lucide.createIcons();
+    }
+
+    // 處理選擇邏輯
+    function selectOption(selectedIndex, isCorrect) {
+      if (isStageComplete) return; // 防止重複點擊
+      
+      const stage = STAGES[currentStageIndex];
+      const buttons = document.querySelectorAll('.option-btn');
+      
+      // 更新按鈕視覺狀態
+      buttons.forEach((btn, idx) => {
+        btn.disabled = true;
+        btn.classList.remove('hover:border-slate-500', 'hover:bg-slate-50');
+        
+        if (idx === selectedIndex) {
+          if (isCorrect) {
+            btn.classList.add('bg-green-50', 'border-green-500', 'text-green-800');
+          } else {
+            btn.classList.add('bg-red-50', 'border-red-500', 'text-red-800');
+          }
+        } else {
+          btn.classList.add('opacity-50');
+        }
+      });
+
+      // 顯示回饋區
+      feedbackArea.classList.remove('hidden');
+      const feedbackCard = document.getElementById('feedback-card');
+      const iconContainer = document.getElementById('feedback-icon-container');
+      const icon = document.getElementById('feedback-icon');
+      const title = document.getElementById('feedback-title');
+      const logicBox = document.getElementById('feedback-logic');
+      
+      document.getElementById('feedback-message').textContent = stage.options[selectedIndex].feedback;
+      document.getElementById('feedback-logic-text').textContent = stage.logicExplanation;
+
+      if (isCorrect) {
+        // 成功破關
+        isStageComplete = true;
+        feedbackCard.className = "w-full rounded-xl p-6 shadow-lg border-2 mb-6 bg-green-50 border-green-400 text-green-900";
+        icon.setAttribute('data-lucide', 'check-circle-2');
+        iconContainer.className = "mt-1 text-green-600";
+        title.textContent = "辯破！守將啞口無言";
+        title.className = "font-bold text-xl mb-2 text-green-700";
+        logicBox.className = "p-4 rounded-lg text-sm font-medium border bg-green-100 border-green-300 text-green-800 mt-4";
+        logicBox.classList.remove('hidden');
+
+        document.getElementById('next-btn').classList.remove('hidden');
+        document.getElementById('next-btn-text').textContent = currentStageIndex < STAGES.length - 1 ? '進入下一輪辯論' : '查看最終結果';
+
+      } else {
+        // 邏輯破綻
+        feedbackCard.className = "w-full rounded-xl p-6 shadow-lg border-2 mb-6 bg-red-50 border-red-400 text-red-900";
+        icon.setAttribute('data-lucide', 'x-octagon');
+        iconContainer.className = "mt-1 text-red-600";
+        title.textContent = "邏輯破綻！";
+        title.className = "font-bold text-xl mb-2 text-red-700";
+        logicBox.classList.add('hidden'); // 錯誤時不顯示邏輯解析
+        
+        // 讓守將頭像震動
+        document.getElementById('guard-image').parentElement.classList.add('guard-shake');
+
+        document.getElementById('next-btn').classList.remove('hidden');
+        document.getElementById('next-btn-text').textContent = '重新選擇';
+        
+        // 如果答錯，將 isStageComplete 保持 false，但覆寫按鈕行為讓它重置當前關卡
+        document.getElementById('next-btn').onclick = () => {
+          renderStage(); // 重新渲染當前關卡
+          document.getElementById('next-btn').onclick = nextStage; // 恢復綁定
+        };
+      }
+
+      lucide.createIcons();
+    }
+
+    // 進入下一關或結算
+    function nextStage() {
+      if (currentStageIndex < STAGES.length - 1) {
+        currentStageIndex++;
+        renderStage();
+      } else {
+        gameContainer.classList.add('hidden');
+        endContainer.classList.remove('hidden');
+        endContainer.classList.add('flex');
+      }
+    }
+
+    // 重新開始遊戲
+    function restartGame() {
+      currentStageIndex = 0;
+      endContainer.classList.add('hidden');
+      endContainer.classList.remove('flex');
+      gameContainer.classList.remove('hidden');
+      renderStage();
+    }
+
+    // 初始載入
+    document.addEventListener('DOMContentLoaded', () => {
+      renderStage();
+    });
+  </script>
+</body>
+</html>
